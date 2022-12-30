@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
 # Supress warnings
-from sqlalchemy import create_engine, MetaData, Table, update, inspect
+import os
+import time
+import warnings
+
+import torch
+from sqlalchemy import MetaData, Table, create_engine, inspect, update
 from sqlalchemy.sql import select
 from transformers import MarianMTModel, MarianTokenizer
-import torch
-import time
-import os
-import warnings
+
 warnings.filterwarnings("ignore")
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -30,15 +32,17 @@ def translate(text, model, tokenizer):
 
 
 if torch.cuda.is_available():
-    torch.device = "cuda"
+    dev = "cuda"
     print("Using CUDA")
 elif torch.has_mps:
-    torch.device = "mps"
+    dev = "mps"
     # torch.device = "cpu"
     print("Using Apple MPS")
 else:
-    torch.device = "cpu"
+    dev = "cpu"
     print("Using CPU")
+
+torch.device(dev)
 
 print("Loading models ...  ")
 fr_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
