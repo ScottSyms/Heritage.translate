@@ -6,8 +6,11 @@ from sqlalchemy.sql import select
 from transformers import MarianMTModel, MarianTokenizer
 import torch
 import time
+import os
 import warnings
 warnings.filterwarnings("ignore")
+
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 
 def translate(text, model, tokenizer):
@@ -20,7 +23,7 @@ def translate(text, model, tokenizer):
 
     # print("Sentences: ", sentences)
     translated = model.generate(
-        **tokenizer(sentences, return_tensors="pt", padding=True))
+        **tokenizer(sentences, return_tensors="pt", padding=True).to(torch.device))
     print("Decoding...")
     test = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
     return "\n".join(test)
@@ -31,7 +34,7 @@ if torch.cuda.is_available():
     print("Using CUDA")
 elif torch.has_mps:
     torch.device = "mps"
-    torch.device = "cpu"
+    # torch.device = "cpu"
     print("Using Apple MPS")
 else:
     torch.device = "cpu"
