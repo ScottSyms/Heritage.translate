@@ -14,6 +14,9 @@ warnings.filterwarnings("ignore")
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
+# Which pairid value to start translating
+startpairid = 0
+
 def translate(text, model, tokenizer):
     print(" Removing newlines ...  ")
     print(" Number of words: ", len(text.split()))
@@ -25,11 +28,24 @@ def translate(text, model, tokenizer):
     translation_output=[]
     for i in sentences:
         print(" Sentence: ", i)
-        print(" Sentence length: ", len(i.split()))
-        translated = model.generate(
-            **tokenizer(i, return_tensors="pt", padding=True))
-        print("Decoding...")
-        translation_output.append([tokenizer.decode(t, skip_special_tokens=True) for t in translated][0])
+        sentencelength=len(i.split())
+        if sentencelength > 300:
+            print(" Sentence too long, splitting into chunks ...  ")
+            chunks = [i[x:x+500] for x in range(0, len(i), 500)]
+            print(" Number of chunks: ", len(chunks))
+            print(" Chunks: ", chunks)
+            for c in chunks:
+                print(" Chunk: ", c)
+                translated = model.generate(
+                    **tokenizer(c, return_tensors="pt", padding=True).to(device))
+                print("Decoding...")
+                translation_output.append([tokenizer.decode(t, skip_special_tokens=True) for t in translated][0])
+        else:
+            print(" Sentence short enough to translate as is ...  ")
+            translated = model.generate(
+                **tokenizer(i, return_tensors="pt", padding=True).to(device))
+            print("Decoding...")
+            translation_output.append([tokenizer.decode(t, skip_special_tokens=True) for t in translated][0])
     print(translation_output)
     return "\n".join(translation_output)
 
@@ -64,7 +80,7 @@ fr_es_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-fr-es")
 fr_es_model.to(device)
 
 dbcon = create_engine(
-    'sqlite:////Users/scottsyms/code/HeritageCanada/data/fish/sample2.db')
+    'sqlite:////Users/scottsyms/code/HeritageCanada/data/sitecontent2.db')
 
 metadata = MetaData()
 source = Table(
@@ -73,7 +89,9 @@ source = Table(
 print("Beginning translation ...  ")
 # Modify English
 result = dbcon.execute(select(
-    [source.c.id, source.c.language, source.c.text]).limit(5))
+    [source.c.id, source.c.language, source.c.text]).where(source.c.pairid > startpairid))
+    
+     #.limit(5))
 
 selectid = []
 [selectid.append(i) for i in result]
